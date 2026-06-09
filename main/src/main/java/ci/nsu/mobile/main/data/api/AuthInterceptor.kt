@@ -9,11 +9,17 @@ class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
+        // Не добавляем Authorization для запросов регистрации и логина
+        val isAuthRequest = originalRequest.url.encodedPath.contains("auth/login") ||
+                originalRequest.url.encodedPath.contains("auth/register")
+
         val requestBuilder = originalRequest.newBuilder()
             .addHeader("Content-Type", "application/json")
 
-        TokenManager.token?.let { token ->
-            requestBuilder.addHeader("Authorization", "Bearer $token")
+        if (!isAuthRequest) {
+            TokenManager.token?.let { token ->
+                requestBuilder.addHeader("Authorization", "Bearer $token")
+            }
         }
 
         return chain.proceed(requestBuilder.build())

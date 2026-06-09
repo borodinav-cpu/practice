@@ -19,9 +19,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -110,7 +110,7 @@ fun RegisterScreen(
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
                 modifier = Modifier
-                    .menuAnchor()
+
                     .fillMaxWidth()
             )
 
@@ -163,7 +163,8 @@ fun RegisterScreen(
 
         Button(
             onClick = {
-                val group = selectedGroup ?: return@Button
+                val group = selectedGroup
+                if (group == null) return@Button
 
                 val person = PersonDto(
                     firstName = firstName,
@@ -186,7 +187,7 @@ fun RegisterScreen(
 
                 onRegister(request)
             },
-            enabled = !state.loading && selectedGroup != null,
+            enabled = !state.isLoading && selectedGroup != null,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Зарегистрироваться")
@@ -199,7 +200,7 @@ fun RegisterScreen(
             Text("Назад")
         }
 
-        if (state.loading) {
+        if (state.isLoading) {
             CircularProgressIndicator()
         }
 

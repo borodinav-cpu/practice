@@ -1,55 +1,58 @@
 package ci.nsu.mobile.main.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ci.nsu.mobile.main.data.model.RegisterRequest
 import ci.nsu.mobile.main.data.repository.AuthRepository
 import ci.nsu.mobile.main.data.storage.TokenManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.util.Log
 
 class AuthViewModel : ViewModel() {
 
     private val repository = AuthRepository()
 
-    var state by mutableStateOf(
+    private val _state = MutableStateFlow(
         AuthUiState(
             isLoggedIn = TokenManager.token != null
         )
     )
-        private set
+    val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
     fun login(
         login: String,
         password: String
     ) {
         if (login.isBlank() || password.isBlank()) {
-            state = state.copy(
+            _state.value = _state.value.copy(
                 error = "Введите логин и пароль"
             )
             return
         }
 
         viewModelScope.launch {
-            state = state.copy(
-                loading = true,
+            _state.value = _state.value.copy(
+                isLoading = true,
                 error = null
             )
 
             repository.login(login, password)
                 .onSuccess {
-                    state = state.copy(
-                        loading = false,
+                    _state.value = _state.value.copy(
+                        isLoading = false,
                         isLoggedIn = true,
                         error = null
                     )
                     loadUsers()
+                    loadGroups()
                 }
                 .onFailure { throwable ->
-                    state = state.copy(
-                        loading = false,
+                    Log.e("AuthViewModel", "Login error", throwable)
+                    _state.value = _state.value.copy(
+                        isLoading = false,
                         error = throwable.message ?: "Ошибка входа"
                     )
                 }
@@ -57,26 +60,30 @@ class AuthViewModel : ViewModel() {
     }
 
     fun register(
-        request: RegisterRequest,
+        registerRequest: RegisterRequest,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
-            state = state.copy(
-                loading = true,
+            _state.value = _state.value.copy(
+                isLoading = true,
                 error = null
             )
 
-            repository.register(request)
+            Log.d("AuthViewModel", "Register request: $registerRequest")
+
+            repository.register(registerRequest)
                 .onSuccess {
-                    state = state.copy(
-                        loading = false,
+                    Log.d("AuthViewModel", "Registration success")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
                         error = null
                     )
                     onSuccess()
                 }
                 .onFailure { throwable ->
-                    state = state.copy(
-                        loading = false,
+                    Log.e("AuthViewModel", "Registration error", throwable)
+                    _state.value = _state.value.copy(
+                        isLoading = false,
                         error = throwable.message ?: "Ошибка регистрации"
                     )
                 }
@@ -85,22 +92,15 @@ class AuthViewModel : ViewModel() {
 
     fun loadUsers() {
         viewModelScope.launch {
-            state = state.copy(
-                loading = true,
-                error = null
-            )
-
             repository.getUsers()
                 .onSuccess { users ->
-                    state = state.copy(
-                        loading = false,
+                    _state.value = _state.value.copy(
                         users = users,
                         error = null
                     )
                 }
                 .onFailure { throwable ->
-                    state = state.copy(
-                        loading = false,
+                    _state.value = _state.value.copy(
                         error = throwable.message ?: "Ошибка загрузки пользователей"
                     )
                 }
@@ -111,13 +111,13 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             repository.getGroups()
                 .onSuccess { groups ->
-                    state = state.copy(
+                    _state.value = _state.value.copy(
                         groups = groups,
                         error = null
                     )
                 }
                 .onFailure { throwable ->
-                    state = state.copy(
+                    _state.value = _state.value.copy(
                         error = throwable.message ?: "Ошибка загрузки групп"
                     )
                 }
@@ -126,14 +126,13 @@ class AuthViewModel : ViewModel() {
 
     fun logout() {
         TokenManager.clear()
-
-        state = AuthUiState(
+        _state.value = AuthUiState(
             isLoggedIn = false
         )
     }
 
     fun clearError() {
-        state = state.copy(
+        _state.value = _state.value.copy(
             error = null
         )
     }

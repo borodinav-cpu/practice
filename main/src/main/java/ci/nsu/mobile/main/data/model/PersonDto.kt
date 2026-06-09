@@ -6,8 +6,9 @@ import kotlinx.serialization.Serializable
 data class PersonDto(
     val firstName: String,
     val lastName: String,
-    val middleName: String,
-    val birthDate: String,
+    val middleName: String? = null,
+    val birthDate: String? = null,
     val gender: String,
     val groupId: Int
+
 )

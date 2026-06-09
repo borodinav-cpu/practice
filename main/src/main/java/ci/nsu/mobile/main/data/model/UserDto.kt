@@ -9,4 +9,5 @@ data class UserDto(
     val email: String? = null,
     val phoneNumber: String? = null,
     val token: String? = null
+
 )

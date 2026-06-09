@@ -37,7 +37,7 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (state.loading) {
+        if (state.isLoading) {
             CircularProgressIndicator()
         }
 

@@ -19,7 +19,7 @@ interface AuthApi {
     @POST("auth/register")
     suspend fun register(
         @Body request: RegisterRequest
-    ): Response<Unit>
+    ): Response<String>  // Изменено с Unit на String для получения тела ответа
 
     @GET("users")
     suspend fun getUsers(): Response<List<UserDto>>

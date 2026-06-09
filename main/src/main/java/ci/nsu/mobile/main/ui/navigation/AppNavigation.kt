@@ -1,56 +1,52 @@
 package ci.nsu.mobile.main.ui.navigation
 
-
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import ci.nsu.mobile.main.ui.screens.LoginScreen
-import ci.nsu.mobile.main.ui.screens.MainScreen
 import ci.nsu.mobile.main.ui.screens.RegisterScreen
+import ci.nsu.mobile.main.ui.screens.UserListScreen
 import ci.nsu.mobile.main.viewmodel.AuthViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @Composable
-fun AppNavigation(
-    viewModel: AuthViewModel = viewModel()
-) {
+fun AppNavigation() {
     val navController = rememberNavController()
-    val state = viewModel.state
+    val authViewModel: AuthViewModel = viewModel()
+    val authState = authViewModel.state.value
 
     NavHost(
         navController = navController,
-        startDestination = if (state.isLoggedIn) "main" else "login"
+        startDestination = if (authState.isLoggedIn) "users" else "login"
     ) {
-        composable("login") {
+        composable(route = "login") {
             LoginScreen(
-                state = state,
-                onLogin = { login, password ->
-                    viewModel.login(login, password)
-                    navController.navigate("main") {
-                        popUpTo("login") {
-                            inclusive = true
-                        }
-                    }
+                onLoginClick = { login, password ->
+                    authViewModel.login(login, password)
                 },
                 onRegisterClick = {
-                    navController.navigate("register")
-                }
+                    navController.navigate(route = "register")
+                },
+                state = authState,
+                onClearError = { authViewModel.clearError() }
             )
         }
 
-        composable("register") {
-            LaunchedEffect(Unit) {
-                viewModel.loadGroups()
-            }
-
+        composable(route = "register") {
             RegisterScreen(
-                state = state,
-                onRegister = { request ->
-                    viewModel.register(request) {
-                        navController.popBackStack()
-                    }
+                state = authState,
+                onRegister = { registerRequest ->
+                    authViewModel.register(
+                        registerRequest = registerRequest,
+                        onSuccess = {
+                            navController.popBackStack()
+                            navController.navigate("login")
+                        }
+                    )
                 },
                 onBackClick = {
                     navController.popBackStack()
@@ -58,21 +54,16 @@ fun AppNavigation(
             )
         }
 
-        composable("main") {
-            LaunchedEffect(Unit) {
-                viewModel.loadUsers()
-            }
-
-            MainScreen(
-                state = state,
-                onLogout = {
-                    viewModel.logout()
+        composable(route = "users") {
+            UserListScreen(
+                users = authState.users,
+                onLogoutClick = {
+                    authViewModel.logout()
                     navController.navigate("login") {
-                        popUpTo("main") {
-                            inclusive = true
-                        }
+                        popUpTo("login") { inclusive = true }
                     }
-                }
+                },
+                state = authState
             )
         }
     }
