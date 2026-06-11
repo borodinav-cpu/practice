@@ -40,7 +40,7 @@ fun AppNavigation() {
             )
         }
 
-        composable(route = "register") {
+        composable("register") {
             RegisterScreen(
                 state = authState,
                 onRegister = { registerRequest ->
@@ -51,8 +51,9 @@ fun AppNavigation() {
                     }
                 },
                 onBackClick = {
-                    navController.navigateUp()
-                }
+                    navController.popBackStack()
+                },
+                onLoadGroups = { authViewModel.loadGroups() }  // <-- ДОБАВЬТЕ
             )
         }
 

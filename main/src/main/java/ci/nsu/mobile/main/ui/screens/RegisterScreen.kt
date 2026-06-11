@@ -9,14 +9,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,13 +29,15 @@ import ci.nsu.mobile.main.data.model.GroupDto
 import ci.nsu.mobile.main.data.model.PersonDto
 import ci.nsu.mobile.main.data.model.RegisterRequest
 import ci.nsu.mobile.main.viewmodel.AuthUiState
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     state: AuthUiState,
     onRegister: (RegisterRequest) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onLoadGroups: () -> Unit = {}
 ) {
     var firstName by rememberSaveable { mutableStateOf("") }
     var lastName by rememberSaveable { mutableStateOf("") }
@@ -50,6 +51,11 @@ fun RegisterScreen(
 
     var expanded by remember { mutableStateOf(false) }
     var selectedGroup by remember { mutableStateOf<GroupDto?>(null) }
+
+    // Загружаем группы при первом открытии
+    LaunchedEffect(Unit) {
+        onLoadGroups()
+    }
 
     Column(
         modifier = Modifier
@@ -97,27 +103,34 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        ExposedDropdownMenuBox(
+        // Простой выпадающий список
+        Text(text = "Группа", modifier = Modifier.padding(bottom = 4.dp))
+
+        OutlinedTextField(
+            value = selectedGroup?.name ?: "Выберите группу",
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = {
+                TextButton(
+                    onClick = { expanded = !expanded }
+                ) {
+                    Text(if (expanded) "▲" else "▼")
+                }
+            }
+        )
+
+        DropdownMenu(
             expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.9f)
         ) {
-            OutlinedTextField(
-                value = selectedGroup?.name ?: "",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Группа") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                modifier = Modifier
-
-                    .fillMaxWidth()
-            )
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
+            if (state.groups.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("Загрузка групп...") },
+                    onClick = { expanded = false }
+                )
+            } else {
                 state.groups.forEach { group ->
                     DropdownMenuItem(
                         text = { Text(group.name) },
@@ -129,6 +142,8 @@ fun RegisterScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = login,
