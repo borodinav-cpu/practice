@@ -1,4 +1,4 @@
-package ci.nsu.mobile.main.data.storage
+package ci.nsu.mobile.main.data.local
 
 import android.content.Context
 import android.content.SharedPreferences

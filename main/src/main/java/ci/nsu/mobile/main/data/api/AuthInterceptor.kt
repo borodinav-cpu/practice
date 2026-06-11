@@ -1,6 +1,6 @@
 package ci.nsu.mobile.main.data.api
 
-import ci.nsu.mobile.main.data.storage.TokenManager
+import ci.nsu.mobile.main.data.local.TokenManager
 import okhttp3.Interceptor
 import okhttp3.Response
 

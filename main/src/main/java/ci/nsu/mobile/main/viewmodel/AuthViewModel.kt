@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ci.nsu.mobile.main.data.model.RegisterRequest
 import ci.nsu.mobile.main.data.repository.AuthRepository
-import ci.nsu.mobile.main.data.storage.TokenManager
+import ci.nsu.mobile.main.data.local.TokenManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,9 +22,18 @@ class AuthViewModel : ViewModel() {
     )
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
+    init {
+        if (!_state.value.isLoggedIn) {
+            loadGroups()
+        } else {
+            loadUsers()
+        }
+    }
+
     fun login(
         login: String,
-        password: String
+        password: String,
+        onSuccess: () -> Unit
     ) {
         if (login.isBlank() || password.isBlank()) {
             _state.value = _state.value.copy(
@@ -39,15 +48,20 @@ class AuthViewModel : ViewModel() {
                 error = null
             )
 
+            Log.d("AuthViewModel", "Login attempt: $login")
+
             repository.login(login, password)
-                .onSuccess {
+                .onSuccess { user ->
+                    Log.d("AuthViewModel", "Login success: ${user.login}")
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isLoggedIn = true,
+                        user = user,  // <-- ТЕПЕРЬ РАБОТАЕТ, ТАК КАК ПОЛЕ ЕСТЬ
                         error = null
                     )
                     loadUsers()
                     loadGroups()
+                    onSuccess()
                 }
                 .onFailure { throwable ->
                     Log.e("AuthViewModel", "Login error", throwable)
@@ -69,7 +83,7 @@ class AuthViewModel : ViewModel() {
                 error = null
             )
 
-            Log.d("AuthViewModel", "Register request: $registerRequest")
+            Log.d("AuthViewModel", "Register request: ${registerRequest.login}")
 
             repository.register(registerRequest)
                 .onSuccess {
@@ -92,14 +106,17 @@ class AuthViewModel : ViewModel() {
 
     fun loadUsers() {
         viewModelScope.launch {
+            Log.d("AuthViewModel", "Loading users...")
             repository.getUsers()
                 .onSuccess { users ->
+                    Log.d("AuthViewModel", "Users loaded: ${users.size}")
                     _state.value = _state.value.copy(
                         users = users,
                         error = null
                     )
                 }
                 .onFailure { throwable ->
+                    Log.e("AuthViewModel", "Load users error", throwable)
                     _state.value = _state.value.copy(
                         error = throwable.message ?: "Ошибка загрузки пользователей"
                     )
@@ -109,14 +126,20 @@ class AuthViewModel : ViewModel() {
 
     fun loadGroups() {
         viewModelScope.launch {
+            Log.d("AuthViewModel", "Loading groups...")
             repository.getGroups()
                 .onSuccess { groups ->
+                    Log.d("AuthViewModel", "Groups loaded: ${groups.size}")
+                    groups.forEach { group ->
+                        Log.d("AuthViewModel", "Group: id=${group.id}, name=${group.name}")
+                    }
                     _state.value = _state.value.copy(
                         groups = groups,
                         error = null
                     )
                 }
                 .onFailure { throwable ->
+                    Log.e("AuthViewModel", "Load groups error", throwable)
                     _state.value = _state.value.copy(
                         error = throwable.message ?: "Ошибка загрузки групп"
                     )
@@ -124,11 +147,13 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun logout() {
+    fun logout(onSuccess: () -> Unit) {
         TokenManager.clear()
         _state.value = AuthUiState(
             isLoggedIn = false
         )
+        loadGroups()
+        onSuccess()
     }
 
     fun clearError() {

@@ -7,6 +7,7 @@ data class AuthUiState(
     val isLoggedIn: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val user: UserDto? = null,
     val users: List<UserDto> = emptyList(),
     val groups: List<GroupDto> = emptyList()
 )

@@ -1,9 +1,6 @@
 package ci.nsu.mobile.main.data.api
 
-import ci.nsu.mobile.main.data.model.GroupDto
-import ci.nsu.mobile.main.data.model.LoginRequest
-import ci.nsu.mobile.main.data.model.RegisterRequest
-import ci.nsu.mobile.main.data.model.UserDto
+import ci.nsu.mobile.main.data.model.*
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -14,12 +11,12 @@ interface AuthApi {
     @POST("auth/login")
     suspend fun login(
         @Body request: LoginRequest
-    ): Response<UserDto>
+    ): Response<AuthResponse>  // Изменено с UserDto на AuthResponse
 
     @POST("auth/register")
     suspend fun register(
         @Body request: RegisterRequest
-    ): Response<String>  // Изменено с Unit на String для получения тела ответа
+    ): Response<Unit>  // Изменено с String на Unit
 
     @GET("users")
     suspend fun getUsers(): Response<List<UserDto>>

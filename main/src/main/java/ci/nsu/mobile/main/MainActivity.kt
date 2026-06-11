@@ -8,10 +8,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import ci.nsu.mobile.main.ui.navigation.AppNavigation
+import ci.nsu.mobile.main.data.local.TokenManager
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TokenManager.init(this)
         setContent {
             Surface(
                 modifier = Modifier.fillMaxSize(),

@@ -8,16 +8,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import ci.nsu.mobile.main.ui.screens.LoginScreen
+import ci.nsu.mobile.main.ui.screens.MainScreen
 import ci.nsu.mobile.main.ui.screens.RegisterScreen
-import ci.nsu.mobile.main.ui.screens.UserListScreen
 import ci.nsu.mobile.main.viewmodel.AuthViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import ci.nsu.mobile.main.viewmodel.AuthUiState
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
-    val authState = authViewModel.state.value
+    val authState by authViewModel.state.collectAsState()
 
     NavHost(
         navController = navController,
@@ -26,10 +26,14 @@ fun AppNavigation() {
         composable(route = "login") {
             LoginScreen(
                 onLoginClick = { login, password ->
-                    authViewModel.login(login, password)
+                    authViewModel.login(login, password) {
+                        navController.navigate("users") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
                 },
                 onRegisterClick = {
-                    navController.navigate(route = "register")
+                    navController.navigate("register")
                 },
                 state = authState,
                 onClearError = { authViewModel.clearError() }
@@ -40,30 +44,28 @@ fun AppNavigation() {
             RegisterScreen(
                 state = authState,
                 onRegister = { registerRequest ->
-                    authViewModel.register(
-                        registerRequest = registerRequest,
-                        onSuccess = {
-                            navController.popBackStack()
-                            navController.navigate("login")
+                    authViewModel.register(registerRequest) {
+                        navController.navigate("login") {
+                            popUpTo("register") { inclusive = true }
                         }
-                    )
+                    }
                 },
                 onBackClick = {
-                    navController.popBackStack()
+                    navController.navigateUp()
                 }
             )
         }
 
         composable(route = "users") {
-            UserListScreen(
-                users = authState.users,
-                onLogoutClick = {
-                    authViewModel.logout()
-                    navController.navigate("login") {
-                        popUpTo("login") { inclusive = true }
+            MainScreen(
+                state = authState,
+                onLogout = {
+                    authViewModel.logout {
+                        navController.navigate("login") {
+                            popUpTo("users") { inclusive = true }
+                        }
                     }
-                },
-                state = authState
+                }
             )
         }
     }

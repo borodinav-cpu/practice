@@ -1,11 +1,8 @@
 package ci.nsu.mobile.main.data.repository
 
 import ci.nsu.mobile.main.data.api.NetworkModule
-import ci.nsu.mobile.main.data.model.GroupDto
-import ci.nsu.mobile.main.data.model.LoginRequest
-import ci.nsu.mobile.main.data.model.RegisterRequest
-import ci.nsu.mobile.main.data.model.UserDto
-import ci.nsu.mobile.main.data.storage.TokenManager
+import ci.nsu.mobile.main.data.model.*
+import ci.nsu.mobile.main.data.local.TokenManager
 import android.util.Log
 
 class AuthRepository {
@@ -19,31 +16,45 @@ class AuthRepository {
         return try {
             Log.d("AuthRepository", "Login request: login=$login")
 
-            val response = api.login(
+            val authResponse = api.login(
                 LoginRequest(
                     login = login,
                     password = password
                 )
             )
 
-            val user = response.body()
+            if (authResponse.isSuccessful) {
+                val token = authResponse.body()?.token
 
-            if (response.isSuccessful && user != null) {
-                user.token?.let { token ->
+                if (token != null) {
                     TokenManager.token = token
                     Log.d("AuthRepository", "Token saved successfully")
+
+                    val usersResponse = api.getUsers()
+
+                    if (usersResponse.isSuccessful) {
+                        val users = usersResponse.body() ?: emptyList()
+                        val user = users.find { it.login == login }
+
+                        if (user != null) {
+                            Log.d("AuthRepository", "Login successful, user: ${user.login}")
+                            Result.success(user)
+                        } else {
+                            Log.e("AuthRepository", "User not found with login: $login")
+                            Result.failure(Exception("Пользователь не найден"))
+                        }
+                    } else {
+                        Log.e("AuthRepository", "Failed to get users, code: ${usersResponse.code()}")
+                        Result.failure(Exception("Не удалось получить данные пользователя"))
+                    }
+                } else {
+                    Log.e("AuthRepository", "Token is null")
+                    Result.failure(Exception("Токен не получен"))
                 }
-
-                Log.d("AuthRepository", "Login successful")
-                Result.success(user)
             } else {
-                val errorBody = response.errorBody()?.string()
-                Log.e("AuthRepository", "Login failed. Code: ${response.code()}")
-                Log.e("AuthRepository", "Error body: $errorBody")
-
-                Result.failure(
-                    Exception("Ошибка входа: ${response.code()}. ${errorBody ?: "Unknown error"}")
-                )
+                val errorBody = authResponse.errorBody()?.string()
+                Log.e("AuthRepository", "Login failed. Code: ${authResponse.code()}")
+                Result.failure(Exception("Ошибка входа: ${authResponse.code()}"))
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Login exception", e)
@@ -55,30 +66,16 @@ class AuthRepository {
         request: RegisterRequest
     ): Result<Unit> {
         return try {
-            Log.d("AuthRepository", "========== REGISTER REQUEST ==========")
-            Log.d("AuthRepository", "Login: ${request.login}")
-            Log.d("AuthRepository", "Email: ${request.email}")
-            Log.d("AuthRepository", "PhoneNumber: ${request.phoneNumber}")
-            Log.d("AuthRepository", "RoleId: ${request.roleId}")
-            Log.d("AuthRepository", "AuthAllowed: ${request.authAllowed}")
-            Log.d("AuthRepository", "Person: ${request.person}")
-            Log.d("AuthRepository", "Full request: $request")
-
+            Log.d("AuthRepository", "Register request: ${request.login}")
             val response = api.register(request)
 
             if (response.isSuccessful) {
                 Log.d("AuthRepository", "Registration successful")
-                Log.d("AuthRepository", "Response body: ${response.body()}")
                 Result.success(Unit)
             } else {
                 val errorBody = response.errorBody()?.string()
                 Log.e("AuthRepository", "Registration failed. Code: ${response.code()}")
-                Log.e("AuthRepository", "Error body: $errorBody")
-                Log.e("AuthRepository", "Message: ${response.message()}")
-
-                Result.failure(
-                    Exception("Ошибка регистрации: ${response.code()}. $errorBody")
-                )
+                Result.failure(Exception("Ошибка регистрации: ${response.code()}"))
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Registration exception", e)
@@ -88,16 +85,17 @@ class AuthRepository {
 
     suspend fun getUsers(): Result<List<UserDto>> {
         return try {
+            Log.d("AuthRepository", "Getting users...")
             val response = api.getUsers()
 
             if (response.isSuccessful) {
-                Result.success(response.body() ?: emptyList())
+                val users = response.body() ?: emptyList()
+                Log.d("AuthRepository", "Users loaded: ${users.size}")
+                Result.success(users)
             } else {
                 val errorBody = response.errorBody()?.string()
-                Log.e("AuthRepository", "Get users failed: ${response.code()}, $errorBody")
-                Result.failure(
-                    Exception("Ошибка загрузки пользователей: ${response.code()}")
-                )
+                Log.e("AuthRepository", "Get users failed: ${response.code()}")
+                Result.failure(Exception("Ошибка загрузки пользователей: ${response.code()}"))
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Get users exception", e)
@@ -107,16 +105,17 @@ class AuthRepository {
 
     suspend fun getGroups(): Result<List<GroupDto>> {
         return try {
+            Log.d("AuthRepository", "Getting groups...")
             val response = api.getGroups()
 
             if (response.isSuccessful) {
-                Result.success(response.body() ?: emptyList())
+                val groups = response.body() ?: emptyList()
+                Log.d("AuthRepository", "Groups loaded: ${groups.size}")
+                Result.success(groups)
             } else {
                 val errorBody = response.errorBody()?.string()
-                Log.e("AuthRepository", "Get groups failed: ${response.code()}, $errorBody")
-                Result.failure(
-                    Exception("Ошибка загрузки групп: ${response.code()}")
-                )
+                Log.e("AuthRepository", "Get groups failed: ${response.code()}")
+                Result.failure(Exception("Ошибка загрузки групп: ${response.code()}"))
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "Get groups exception", e)
